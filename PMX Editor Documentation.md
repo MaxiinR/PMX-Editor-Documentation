@@ -1,508 +1,521 @@
 
 
-PMX Editor is a powerful tool for editing models in the PMX format, an extension of the PMD format used in MikuMikuDance (MMD). This documentation provides a comprehensive guide to its features, best practices, and technical details, ensuring both beginners and advanced users can make the most of the editor. 
+## Table of Contents
 
----
+1. [Introduction](#introduction "null")
 
-## Introduction
-
-PMX Editor is designed for editing 3D models in the PMX format, offering advanced capabilities compared to the older PMD Editor. It supports extensive customization through plugins and scripting, making it a versatile tool for MMD model creation and modification.
-
-PMX Editor is a specialized 3D modeling tool used primarily for creating models compatible with MikuMikuDance (MMD). It supports the `.pmx` and `.pmd` formats and offers advanced tools for rigging, animation, facial expressions, and physics-based simulations.
-
-Despite its popularity among content creators, **there is a severe lack of developer documentation** regarding plugin development, file structure parsing, or internal mechanics. This document aims to fill that gap by providing technical insights into:
-
-- Plugin development using C#, Python, and SlimDX  
-- Bone system architecture and IK handling  
-- Facial morph implementation  
-- Reverse-engineered PMX format details  
-- Existing plugins and community tools  
-
----
-
-## System Requirements
-
-To ensure optimal performance, the following system requirements are recommended:
-
-- **Operating System:** Windows 10 or newer
-- **Processor:** Supports SSE1 or higher
-- **Graphics Card:** Compatible with Shader Model 3.0 or higher
-- **Architecture:** 64-bit (recommended for large models)
-
----
-
-## Key Features and Functionalities
-
-### General Information
-
-- **File Management:** PMX models reference external texture files (e.g., `.png` `.jpeg` `.tga` `.dds`). Avoid using Japanese filenames to prevent compatibility issues.
-  For spa textures you can also use `.spa`, `.sph`, but for 2025 year  usage of these file extentions are unpopular. 
-- **Compatibility:** Be mindful of character limits for paths and filenames, especially when transitioning from PMD to PMX formats. 
-
-### User Interface and Controls
-
-- **TransformView Enhancements:** Intuitive tools like joint pinching for deformation are available, but traditional handle transformations remain the standard for detailed pose design.
-- **Selection and Filtering:** Efficient tools for filtering views by bones, rigid bodies, and joints help manage complex models.
-- **Camera Settings:** Adjust perspective toggling and rotation center settings for better control.
-
-### Editing Tools
-
-- **Morph Editing:** Improved synchronization and undo functionality for morph edits.
-- **Vector Copy Functionality:** Simplifies repetitive coordinate adjustments.
-- **UV Mapping:** Complete UV mapping before converting to PMX to avoid compatibility issues.
-- **Joint Position Verification:** Basic checks ensure joints are correctly positioned between related rigid bodies.
-- Regularly save your work and use automatic backup plugins.
-- Use vector copy tools for efficient coordinate operations.
-- Complete UV mapping before finalizing PMX conversions.
-- Verify joint positions to ensure proper physics simulation.
-
----
-
-
-__ переписать 
-## Technical Details
-
-The PMX Editor provides a comprehensive toolset for managing bones and weighting in 3D models, crucial for animators and developers working with MMD (MikuMikuDance). Here's an aggregation of insights and tutorials from various sources to help you understand bone setup and weighting processes.
-
-### Bone Setup
-
-To begin with, launching PMX Editor and loading your model is the first step. Under the "Bone" tab, which is also referred to as the BON tab in some versions, users can find a list of bones along with their parameters
-
-This interface allows for the creation, modification, and management of bones essential for animation rigging.
-
-### Rigging Models with Multiple Bones
-
-For complex models that include elements like skirts or wings, it is recommended to set up a detailed bone structure. One useful document outlines physics settings for a 49-bone rig, advising that the first one or two bones of movable parts such as skirts and wings should be configured for bone tracking to ensure stability during animations
-
-
-### Weighting Process
-
-Weighting is the process of assigning influence of bones over vertices in a model:
-
-1. Load your model and position the elements like hair.
-2. Select the necessary tools and navigate to the "Bone" tab.
-3. Assign weights to ensure natural movement when the bones are manipulated
-
-### Advanced Weighting Techniques
-
-For more precise control over vertex deformation, consider using SDEF (Spherical Deformation) interpolation. Users can select one or more vertices and change their weight mode to SDEF via the edit/weights menu. The PMX Editor then calculates the centers based on the bone setup, allowing for smoother transitions and more realistic deformations
-
-### Best Practices
-
-- **Smooth Physics:** When setting up bones for elements like skirts and wings, prioritize stability by configuring initial bones for tracking purposes before adding more complex physics simulations
-
-- **Vertex Control:** Utilize advanced weighting methods like SDEF to enhance realism in vertex deformations, particularly useful in characters with intricate designs or dynamic movements
-
-
-By following these guidelines and leveraging the capabilities of PMX Editor, developers and animators can achieve highly realistic and fluid animations tailored to their specific needs. Understanding both fundamental and advanced techniques in bone setup and weighting is essential for maximizing the potential of 3D models within MMD environments. 
-
-__ переписать 
-
----
-
-## Development Environment
-
-### Memory Management
-
-- Undo operations consume significant memory. Use the 64-bit version for large models to avoid 32-bit memory limitations.
-
----
-
-## Troubleshooting
-
-- **Startup Errors:** Unblock ZIP or DLL files after downloading to prevent errors.
-- **High DPI Issues:** Run the editor at 100% scale on high-resolution displays.
-- **Memory Crashes:** Regularly save your work due to potential memory-related crashes.
-
----
-
-## Known Issues and Workarounds
-
-- Legacy UI elements may not work properly on newer Windows versions.
-- Block external DLLs before use to prevent security warnings.
-
----
-
-## Security Considerations
-
-- External texture files (e.g., `.png`) are referenced by the model.
-- Avoid using Russian characters in filenames and paths to prevent issues.
-- Texture file encryption remains a challenge for web-based implementations.
-
-# PMX Editor (MMD) – Technical Overview
-
-**Architecture & Dependencies:** PMX Editor is a Windows-only model-editing tool (successor to PMD Editor) implemented as a standalone GUI application. It requires the Microsoft .NET Framework (4.5 or newer), the DirectX 9.0c runtime, and the Visual C++ 2010 Redistributable. (One popular English build even notes “Remember: ‘Unblock’ the .zip file before extracting it” to avoid Windows DLL-blocking issues.) The program uses DirectX for 3D rendering (e.g. requiring Shader Model 3.0) and bundles the SlimDX library for GPU access. Both 32-bit and 64-bit executables are provided (the 32-bit build “will NOT work on 64-bit OS” as noted in distribution notes). No formal installer is needed – the app is “install-free” (just unzip the archive). Performance and memory limits align with PMX conventions (PMX v2.0 allows up to ~4 billion vertices vs. 65535 in PMD).
-
-**Plugin/System Integration:** PMX Editor has a binary plugin system but no public SDK documentation. By convention, plugins are distributed as DLLs dropped into the `_plugin\User` folder within the PMX Editor directory. (For example, a Japanese tutorial explains that under the PMX Editor folder is a `_plugin` directory containing a `User` subfolder; placing plugin DLLs there “completes installation”. The official readme simply states “Plugins folder: See _plugin/user.path”, which corresponds to that structure.) Plugins are typically written in .NET languages (e.g. C#) to interoperate with the editor’s internals. Community examples (below) are mostly C# DLLs. The editor loads each plugin DLL at runtime; users sometimes must “unblock” downloaded DLLs (or the containing ZIP) to avoid the “operation not supported” errors due to Windows file security.
-
-**PMX File Format (Spec):** The PMX format (Polygon Model eXtended) is the official model format for MMD v7.31+. It begins with a 4-byte ASCII signature `"PMX "` followed by a float version (2.0 or 2.1). A fixed-size “Globals” block (8 bytes for PMX 2.0) then follows, encoding the text string format and index sizes. In particular, one global byte flags whether text is UTF-16LE or UTF-8, and several bytes specify how many bytes are used for indices of vertices, textures, materials, bones, morphs, and rigid bodies (each can be 1, 2, or 4 bytes). After this header come model metadata (Japanese/English names and comments) and counts of vertices, faces, textures, materials, bones, morphs, display frames, rigid bodies, joints, etc. Vertices have positions, normals, UVs (up to 4 sets), and bone weights (supporting up to 4 bones per vertex in PMX 2.0); multiple deform types (BDEF1/2/4, SDEF) and edge flags are encoded as specified by the spec. Material entries include textures/spheres, toon/shadow flags, and other per-material data. In short, PMX adds beyond PMD: unlimited-length text fields, 4-vector additional UVs, real-valued bone weights, SDEF skinning, more flexible material flags, etc. (See e.g. the community “PMX file format” specification for a complete field-by-field breakdown.)
-
-**Plugin/Tool Examples:** A number of third-party plugins and libraries exist for extending PMX Editor or working with PMX files. Notable examples include:
-
-- **Wampa842 – “WPlugins” (GPL‑3.0):** A bundle of PMXE plugins (source on GitHub) providing an OBJ importer/exporter, morph scaling tools, selection storage, etc. Its readme lists features like “Wavefront OBJ importer” (with job file presets) and “Selection Storage” (save/restore named vertex/bone selections).
+    - [Overview of PMX Editor](#overview-of-pmx-editor "null")
+        
+    - [Target Audience and Purpose](#target-audience-and-purpose "null")
+        
+2. [Core Technical Concepts](#core-technical-concepts "null")
     
-- **paralleltree – PmXEditorPlugins (MIT):** A GitHub repo of simple plugins targeting PMD/PMX Editor. For example, it hosts “ContinuousSelection” (select all faces adjacent to the current vertex set) and “WeightedOffsetBlend” (add vertex offsets weighted by distance). These plugins are DLLs downloaded (often via BowlRoll) and drop into the user plugin folder.
+    - [The PMX File Format](#the-pmx-file-format "null")
+        
+        - [General Structure and Signature](#general-structure-and-signature "null")
+            
+        - [Key Data Segments](#key-data-segments "null")
+            
+        - [Deformation](#deformation-types-bdef-sdef "null") Types (BDEF, SDEF)
+            
+    - [PMX Editor Architecture](#pmx-editor-architecture "null")
+        
+        - [Rendering Engine (DirectX via SlimDX)](#rendering-engine-directx-via-slimdx "null")
+            
+        - [Plugin Subsystem](#plugin-subsystem "null")
+            
+3. [Plugin Development Environment Setup](#plugin-development-environment-setup "null")
     
-- **pymeshio (Python, zlib license):** A Python library that can read/write PMD/PMX and convert between them. For instance, you can load a PMD model, convert it to a PMX model, and write it to disk – e.g. `pymeshio.pmx.writer.write(file, pmx_model)` returns `True` when complete. Such libraries illustrate how PMX structure is parsed (parsing vertices, bones, morphs, etc.) in code.
+    - [System and Software Prerequisites](#system-and-software-prerequisites "null")
+        
+    - [Essential](#essential-libraries-peplugindll-and-slimdxdll "null") Libraries: `PEPlugin.dll` and `SlimDX.dll`
+        
+    - [Project Configuration in Visual Studio](#project-configuration-in-visual-studio "null")
+        
+        - [.NET Framework Version](#net-framework-version "null")
+            
+        - [C# Language Version](#c-language-version "null")
+            
+        - [Platform Target (x86/x64)](#platform-target-x86x64 "null")
+            
+4. [Developing Plugins for PMX Editor](#developing-plugins-for-pmx-editor "null")
     
-- **Other tools:** The broader MMD community offers many resources. For example, _LegToe-IK Generator_ (Johnwithlenon) adds leg/toe IK bones via a PMXE plugin. Many utilities exist on forums or sites like BowlRoll/DeviantArt (e.g. plugins to add default bones, auto-luminosity morphs, etc.). Blender MMD import/export tools (like MMD Tools) also support PMX.
+    - [Plugin Lifecycle and Entry Point (`IPEPlugin`)](#plugin-lifecycle-and-entry-point-ipeplugin "null")
+        
+    - [Interacting with PMX Editor API](#interacting-with-pmx-editor-api "null")
+        
+        - [Accessing Model Data (`IPXPmx`, `IPXPmxBuilder`)](#accessing-model-data-ipxpmx-ipxpmxbuilder "null")
+            
+        - [Manipulating Bones (`IPXBone`)](#manipulating-bones-ipxbone "null")
+            
+        - [Working with Morphs (`IPXMorph`)](#working-with-morphs-ipxmorph "null")
+            
+        - [Handling Materials (`IPXMaterial`) and UVs](#handling-materials-ipxmaterial-and-uvs "null")
+            
+        - [Managing Physics Components (`IPXRigidBody`, `IPXJoint`)](#managing-physics-components-ipxrigidbody-ipxjoint "null")
+            
+    - [C# Scripting within PMX Editor](#c-scripting-within-pmx-editor "null")
+        
+5. [Best Practices and Common Pitfalls](#best-practices-and-common-pitfalls "null")
+    
+    - [API Versioning and Compatibility](#api-versioning-and-compatibility "null")
+        
+    - [Null Reference Handling](#null-reference-handling "null")
+        
+    - [Avoiding Modern C# Features](#avoiding-modern-c-features "null")
+        
+    - [Correct Referencing and Initialization](#correct-referencing-and-initialization "null")
+        
+    - [Memory Management and Performance](#memory-management-and-performance "null")
+        
+6. [Troubleshooting Common Development Issues](#troubleshooting-common-development-issues "null")
+    
+    - [DLL Loading Errors (Blocked Files, Missing Dependencies)](#dll-loading-errors-blocked-files-missing-dependencies "null")
+        
+    - [Compilation Errors (Type Mismatches, Missing Member Definitions)](#compilation-errors-type-mismatches-missing-member-definitions "null")
+        
+    - [Runtime Crashes](#runtime-crashes "null")
+        
+7. [Advanced Topics](#advanced-topics "null")
+    
+    - [Understanding SDEF Internals (Reverse Engineered)](#understanding-sdef-internals-reverse-engineered "null")
+        
+    - [Interoperability with Other Tools (e.g., Blender MMD Tools)](#interoperability-with-other-tools-eg-blender-mmd-tools "null")
+        
+8. [Community and Resources](#community-and-resources "null")
+    
+    - [Key Repositories and Plugin Examples](#key-repositories-and-plugin-examples "null")
+        
+    - [Relevant Online Communities](#relevant-online-communities "null")
+        
+9. [Appendix: Reference Tables](#appendix-reference-tables "null")
+    
+    - [PMX File Structure Overview](#pmx-file-structure-overview "null")
+        
+    - [Bone Flags Explained](#bone-flags-explained "null")
+        
+    - [Key API Interfaces](#key-api-interfaces "null")
+        
+
+## 1. Introduction
+
+### Overview of PMX Editor
+
+PMX Editor is a dedicated 3D modeling application for creating and modifying models compatible with MikuMikuDance (MMD). It primarily utilizes the `.pmx` file format, an advanced iteration of the older `.pmd` format, offering enhanced features for rigging, morphing, physics simulation, and material definition. The editor's extensibility via plugins makes it a powerful tool for custom model development.
+
+### Target Audience and Purpose
+
+This documentation is intended for software developers aiming to create plugins or external tools that interact with PMX Editor or the PMX file format. It provides technical insights into the editor's architecture, plugin development methodologies, file format specifics, and best practices, addressing the general lack of official developer-focused documentation.
+
+## 2. Core Technical Concepts
+
+### The PMX File Format
+
+#### General Structure and Signature
+
+The PMX (Polygon Model eXtended) format is the contemporary standard for MMD models (v7.31+).
+
+- **Signature:** Files begin with the ASCII string `"PMX "` (note the trailing space).
+    
+- **Version:** A `float` indicating the PMX version (e.g., 2.0, 2.1).
+    
+- **Globals Header:** A fixed-size block defining global parameters:
+    
+    - Text encoding (UTF-16LE or UTF-8).
+        
+    - Sizes (in bytes: 1, 2, or 4) for indices related to vertices, textures, materials, bones, morphs, and rigid bodies. This structure facilitates more complex models compared to the PMD format.
+        
+
+#### Key Data Segments
+
+A PMX file is composed of distinct data sections, typically including:
+
+1. **Model Information:** Names, comments (often in Japanese and English).
+    
+2. **Vertex Data:** Positions, normals, UV coordinates (up to 4 sets per vertex), bone weights (BDEF1/2/4, SDEF, QDEF), edge scaling factor.
+    
+3. **Face (Index) Data:** Defines triangular faces using vertex indices.
+    
+4. **Texture Table:** A list of paths to external texture files (e.g., `.png`, `.jpg`, `.tga`, `.dds`, `.spa`, `.sph`).
+    
+5. **Material Data:** Surface properties including diffuse, specular, ambient colors; shininess; edge color/size; texture/sphere/toon map indices; rendering flags.
+    
+6. **Bone Data:** Hierarchical skeletal structure, including bone names, positions, parent/target indices, IK links, and various behavioral flags.
+    
+7. **Morph Data:** Defines shape variations (vertex, bone, UV, material, group morphs).
+    
+8. **Display Frame Data:** Organizes bones and morphs into groups for the editor's UI.
+    
+9. **Rigid Body Data:** Parameters for physics simulation (shape, mass, friction, restitution, associated bone, collision group/mask).
+    
+10. **Joint Data:** Constraints connecting rigid bodies for physics.
     
 
-**Community Notes:** Discussion threads and blog posts often clarify usage details. For instance, Japanese sites emphasize the need to install prerequisites (VC++ 2010, DirectX 9.0c) and to disable file blocking. Amenrenet’s DeviantArt page provides a partial English translation of the official README, confirming plugin folder paths and startup options. The VPVP wiki notes that all MMD v7.31+ models use PMX 2.0 by default. Developers writing tools or plugins should consult these specs and examples; for instance, the detailed PMX spec on GitHub and open-source plugin projects provide concrete guidance on fields and APIs.
+#### Deformation Types (BDEF, SDEF)
 
-**Sources:** Official spec and user translations; community wikis; tool/plugin docs and code; tutorials/blogs on PMX Editor usage. Each source is cited above for verification. 
+PMX supports several skinning methods for vertex deformation by bones:
 
+- **BDEF1:** Influence from a single bone.
+    
+- **BDEF2:** Linear blend between two bones.
+    
+- **BDEF4:** Linear blend between up to four bones.
+    
+- **SDEF (Spherical Deformation):** A more complex algorithm for smoother deformations, especially at joints. It involves additional weight parameters (C, R0, R1 vectors) per vertex for the two influencing bones. The exact SDEF calculation is not officially documented.
+    
+- **QDEF (Quaternion-based Deformation):** An experimental type, less commonly used.
+    
 
+### PMX Editor Architecture
 
----
+#### Rendering Engine (DirectX via SlimDX)
 
-## Technological Stack & Libraries for Plugin Development
+PMX Editor is a Windows application utilizing the .NET Framework (typically 4.x). Its 3D rendering is powered by DirectX 9.0c, accessed through the **SlimDX** library, which is a .NET wrapper for DirectX APIs. Plugins requiring graphical output or manipulation of 3D data will interact with SlimDX.
 
-### Key Technologies Used
+#### Plugin Subsystem
 
-| Technology | Description |
-|-----------|-------------|
-| **SlimDX** | A .NET wrapper for DirectX, used extensively for rendering, texture handling, and graphical effects in plugins like `PMXEPlugin536`. |
-| **C#** | Primary language for plugin development due to integration with PEPlugin.dll and native support in PMX Editor. |
-| **Python** | Used in plugins like `KKPMX` for automation tasks such as bone cleanup, physics conversion, and mesh optimization. |
+The editor features a binary plugin system. Plugins are typically .NET assemblies (DLLs) written in C# that interface with PMX Editor's core functionalities.
 
-### Example: Using SlimDX in a Plugin
+- **Plugin Location:** DLLs are placed in the `_plugin\User\` (or similar) subdirectory of the PMX Editor installation.
+    
+- **API Access:** Plugins interact with the editor via `PEPlugin.dll`, which exposes interfaces for model data manipulation, UI interaction, and other services.
+    
 
-```csharp
-using SlimDX;
-using SlimDX.Direct3D9;
+## 3. Plugin Development Environment Setup
 
-public class TextureMaskPlugin {
-    public void MaskImageToEdge(Texture texture, Rectangle edgeRect) {
-        // Normalize UV positions and scale edge regions
-        // ...
+### System and Software Prerequisites
+
+- **Operating System:** Windows (Windows 10 or newer recommended).
+    
+- **IDE:** Microsoft Visual Studio (e.g., 2019, 2022) with .NET desktop development workload.
+    
+- **.NET Framework:** PMX Editor and its plugins target older .NET Framework versions (see below).
+    
+- **PMX Editor Installation:** Required for accessing core DLLs and testing.
+    
+
+### Essential Libraries: `PEPlugin.dll` and `SlimDX.dll`
+
+These are the cornerstone DLLs for plugin development:
+
+- `PEPlugin.dll`: The primary API library for PMX Editor. It contains interfaces and classes for accessing and modifying model data, interacting with the editor's UI, and managing plugin operations.
+    
+- `SlimDX.dll`: A .NET wrapper for Microsoft DirectX. It's used for 3D graphics operations, vector and matrix math, and any direct rendering tasks.
+    
+
+Both DLLs must be referenced in your plugin project. They are found within the PMX Editor's installation directory. It's common practice to copy these to a `lib` folder within your project and reference them from there. Ensure these files are "unblocked" in their Windows properties if downloaded from the internet.
+
+### Project Configuration in Visual Studio
+
+#### .NET Framework Version
+
+- **Target Framework:** Set your Class Library project to **.NET Framework 4.7.2** or **.NET Framework 4.8**. Using newer versions like .NET Core or .NET 5+ will result in incompatible assemblies.
+    
+
+#### C# Language Version
+
+- **Language Version:** Set to **C# 7.3** or lower. (Project Properties → Build → Advanced → Language version). PMX Editor's host environment does not support newer C# features (e.g., C# 8.0+ range operators, default interface methods).
+    
+
+#### Platform Target (x86/x64)
+
+- **Platform Target:** Typically **x86 (32-bit)**. While 64-bit versions of PMX Editor exist, targeting x86 ensures broader compatibility unless you are specifically developing for an x64 environment and the editor version explicitly supports it. (Project Properties → Build → Platform target).
+    
+
+## 4. Developing Plugins for PMX Editor
+
+### Plugin Lifecycle and Entry Point (`IPEPlugin`)
+
+A PMX Editor plugin is a .NET class library (DLL) that implements the `IPEPlugin` interface from `PEPlugin.dll`. Key members of `IPEPlugin`:
+
+- `Name` (string): The display name of the plugin.
+    
+- `Version` (string): The plugin's version number.
+    
+- `Description` (string): A brief description of the plugin.
+    
+- `Run(IPERunArgs args)` (void): The main execution method called when the plugin is invoked from the editor. The `IPERunArgs` argument provides access to the host editor's services and the current model.
+    
+
+```
+using PEPlugin;
+using PEPlugin.Pmx; // For IPXPmx, etc.
+using PEPlugin.PE;   // For IPERunArgs, etc.
+using System.Windows.Forms; // For MessageBox
+
+public class SamplePlugin : IPEPlugin
+{
+    public string Name => "Sample Plugin";
+    public string Version => "1.0.0";
+    public string Description => "A basic PMX Editor plugin.";
+
+    public void Run(IPERunArgs args)
+    {
+        // Access the host and PMX data
+        IPEPluginHost host = args.Host;
+        IPXPmx pmx = host.Connector.Pmx;
+
+        if (pmx == null)
+        {
+            MessageBox.Show("No PMX model is currently loaded.", "Plugin Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        MessageBox.Show($"Model '{pmx.ModelInfo.ModelName}' loaded. It has {pmx.Vertex.Count} vertices.", "Plugin Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        
+        // Plugin logic here
     }
 }
 ```
 
-> **Note**: To compile plugins, you must manually copy `SlimDX.dll` and `PEPlugin.dll` from the PMX Editor installation directory into your project folder.
+### Interacting with PMX Editor API
 
----
+#### Accessing Model Data (`IPXPmx`, `IPXPmxBuilder`)
 
-## PMX Editor Architecture: Bones, Bindings, and File Operations
+- `IPXPmx`: Represents the currently loaded PMX model. It provides access to collections of vertices, faces, materials, bones, morphs, etc. (e.g., `pmx.Vertex`, `pmx.Bone`). This interface is primarily for reading data.
+    
+- `IPXPmxBuilder`: Used for constructing new PMX elements (e.g., `builder.Vertex()`, `builder.Bone()`). This is essential when modifying the model or creating new parts. The `IPXPmx` object is typically obtained via `args.Host.Connector.Pmx`. The `IPXPmxBuilder` is often obtained via `args.Host.Connector.PmxBuilder`.
+    
 
-### Bone Management System
+#### Manipulating Bones (`IPXBone`)
 
-The internal bone system in PMX Editor supports:
-- **IK Chains**
-- **Local vs Global Transform Flags**
-- **Parent-Child Inheritance**
-- **SDEF Deformations (Sphere Deformation)**
+Bones are accessed via `pmx.Bone` (a list of `IPXBone` objects).
 
-A newly discovered flag — **bit 7** — controls whether an additional transformation is applied locally. This flag corresponds to the "L" button in the UI and is essential when developing plugins like `ArmIKPlus`.
+```
+// Example: Iterate through bones and print their names
+foreach (IPXBone bone in pmx.Bone)
+{
+    System.Diagnostics.Debug.WriteLine($"Bone: {bone.Name}");
+}
 
-The bone and weight system is central to PMX Editor's functionality:
+// Example: Create a new bone (conceptual, using builder)
+// IPXPmxBuilder builder = args.Host.Connector.PmxBuilder;
+// IPXBone newBone = builder.Bone();
+// newBone.Name = "MyNewBone";
+// newBone.Position = new PEPlugin.SDX.V3(0, 1, 0); // Using SlimDX V3 type
+// pmx.Bone.Add(newBone); // Modifying collections usually requires updating the view
+```
 
-- **Bone Creation and Manipulation:**
-  ```csharp
-  var bone = m_bld.Bone();
-  bone.Position = new V3(x, y, z);
-  pmx.Bone.Add(bone);
-  ```
-- **Weight Painting:** BDEF4 continuous bone selection and deformation synchronization are supported.
- 
-### File Handling
+#### Working with Morphs (`IPXMorph`)
 
-- Supports `.pmx` (version 2.0+) and `.pmd`
-- Each model includes sections for:
-  - Vertices
-  - Bones
-  - Materials
-  - Morphs
-  - Rigid bodies and constraints
+Morphs are accessed via `pmx.Morph`. Each `IPXMorph` object has a `MorphType` and a list of offsets.
 
-Example bone structure inside PMX files:
-```csharp
-struct Bone {
-    string Name;
-    Vector3 Position;
-    int ParentIndex;
-    int ChildCount;
-    byte[] Flags; // Includes flags like BDEF type, SDEF usage, etc.
+```
+// Example: List vertex morphs
+foreach (IPXMorph morph in pmx.Morph)
+{
+    if (morph.MorphType == MorphType.Vertex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Vertex Morph: {morph.Name}");
+    }
 }
 ```
 
----
+#### Handling Materials (`IPXMaterial`) and UVs
 
-## Plugin Development: Code Examples and Tools
+Materials define surface appearance. `pmx.Material` provides a list of `IPXMaterial`. UVs are part of `IPXVertex` data.
 
-### Building Your First Plugin
-
-#### Steps:
-1. Install Visual Studio 2019+
-2. Create a new Class Library (.dll)
-3. Add references to:
-   - `PEPlugin.dll`
-   - `SlimDX.dll`
-4. Implement the plugin interface:
-   ```csharp
-   public class MyPlugin : IPEPlugin {
-       public string Name => "MyPlugin";
-       public string Version => "1.0";
-       
-       public void Run(PEPlugin.ICore core) {
-           MessageBox.Show("Hello from PMX Editor!");
-       }
-   }
-   ```
-5. Place the compiled `.dll` in:
-   ```
-   $(PmxEditor_root_dir)\_plugin\User\
-   ```
-
-
-- **Dynamic Plugins:** New Compact Plugins (CPlugins) can be loaded/unloaded at runtime:
-  ```csharp
-  public class Register : RegisterBase {
-      public override string[] ClassNames {
-          get { return new string[] { "CPluginTest.Class1" }; }
-      }
-  }
-  ```
-
-
-- **C# Scripting:** Write custom scripts directly within the editor using C#. This is ideal for automating tasks or extending functionality without needing a full Visual Studio setup.
-- **Sample Plugin Code:**
-  ```csharp
-  foreach (var m in material.Where(x => x.Toon == "toon01.bmp")) {
-      m.Toon = "toon03.bmp";
-  }
-  ```
- 
-### Open Source Tool: MMD Tools (Blender Plugin)
-
-- Supports import/export of `.pmx`, `.pmd`, `.vmd`, `.vpd`
-- Latest version: **4.3.6** (May 8, 2025)
-- Features:
-  - Physics body editing
-  - Material tweaking
-  - Support for OpenCC without pip install
-
-GitHub: [https://github.com/UuuNyaa/blender_mmd_tools](https://github.com/UuuNyaa/blender_mmd_tools)
-
-
-### Material System
-
-Materials define the visual properties of models:
-
-- **Material Properties:**
-  ```csharp
-  this.txtMaterial_Amb_G = new TextBox(); // Ambient Green component
-  this.txtMaterial_Spe_G = new TextBox(); // Specular Green component
-  ```
-
-###### Soft Body Physics
-
-Soft body physics simulate flexible objects:
-
-- **Configuration:**
-  ```csharp
-  this.txtSoftBody_Margin.Text = sb.Margin.ToString();
-  this.sbConfig.chkSoftBody_GenerateClusters.Checked = sb.IsGenerateClusters;
-  ```
-
-###### Morph System
-
-Morphs allow dynamic changes to models:
-
-- **Offset Management:**
-  ```csharp
-  this.ledMorphOffset.Location = new Point(182, 286);
-  ```
-
-###### Joint System
-
-Joints define constraints between rigid bodies:
-
-- **Limit Configuration:**
-  ```csharp
-  this.txtJoint_Limit_MovY_L.Text = j.Limit_MoveLow.Y.ToString();
-  ```
-
-
----
-??
-## Reverse Engineering the PMX Format
-
-### PMX File Structure Breakdown
-
-| Section | Description |
-|--------|-------------|
-| Header | Contains format version, encoding, and extra data size |
-| Vertex Data | Position, normals, UVs, and bone weights |
-| Face Indices | Triangle indices for drawing |
-| Bones | Hierarchical structure with transforms and flags |
-| Morphs | Face expressions, shape keys, and material morphs |
-| Display Frames | UI categories for grouping bones/morphs |
-| Rigid Bodies | Physics simulation data |
-| Joints | Constraints between rigid bodies |
-
-### Deformation Types Supported
-
-| Type | Description |
-|------|-------------|
-| **BDEF1** | Single bone influence |
-| **BDEF2** | Two bone blending |
-| **BDEF4** | Four bone blending |
-| **SDEF** | Sphere deformation – requires `C`, `R0`, and `R1` vectors |
-| **QDEF** | Quaternion-based deformation |
-
-> ⚠️ **Note**: The exact calculation method for `SDEF` remains undocumented and has been reverse-engineered only partially.
-
----
-?? 
-## Bone System Implementation in PMX Editor
-
-### IK Chain Creation with ArmIKPlus
-
-This plugin creates arm IK chains automatically and supports three modes:
-- **Type1**: Basic hand positioning
-- **Type2**: Object holding (e.g., sword, microphone)
-- **Advanced**: Obsolete due to dependency issues
-
-Usage:
-1. Load two models (e.g., Honne Dell and Hatsune Miku)
-2. Use `OP` function to link bones
-3. Result: Right hand follows head movement automatically
-
-> 🧩 Known issue: Newly created IK bones may be invisible until renamed via Batch Name Editor.
-
-### Bone Flag Details
-
-| Bit | Meaning |
-|-----|---------|
-| Bit 0 | Rotatable |
-| Bit 1 | Translatable |
-| Bit 2 | Visible |
-| Bit 3 | Controllable |
-| Bit 4 | Indexed Tail Position |
-| Bit 5 | Append Rotation |
-| Bit 6 | Append Translation |
-| Bit 7 | Local Transformation (undocumented) |
-
----
-
-## Facial Expressions (Morphs) and Animation Integration
-
-### Morph Types
-
-| Type | Description |
-|------|-------------|
-| **Vertex Morphs** | Direct vertex position changes |
-| **Bone Morphs** | Changes bone transform |
-| **UV Morphs** | Modifies texture coordinates |
-| **Material Morphs** | Alters material properties |
-
-### Flip Morph Behavior
-
-Flip morphs allow dynamic control over other morphs through weight coefficients. For example:
-```python
-def apply_flip_morph(morph_name, weight):
-    if weight > 0.5:
-        activate_morph("Smile")
-    else:
-        deactivate_morph("Smile")
+```
+// Example: Change diffuse color of the first material
+if (pmx.Material.Count > 0)
+{
+    IPXMaterial firstMaterial = pmx.Material[0];
+    firstMaterial.Diffuse = new PEPlugin.SDX.V4(1.0f, 0.0f, 0.0f, 1.0f); // Red color (R,G,B,A)
+    // Remember to update the view/model if changes are made
+    // args.Host.Connector.View.UpdatePmxView(); or similar
+}
 ```
 
-Used heavily in plugins like `KKPMX` to simulate emotional expression transitions.
+#### Managing Physics Components (`IPXRigidBody`, `IPXJoint`)
 
----
-?? 
-## Ecosystem Analysis: Plugins, Extensions, and Communities
+Rigid bodies and joints are accessed via `pmx.RigidBody` and `pmx.Joint` respectively.
 
-### Notable Plugins
+### C# Scripting within PMX Editor
 
-| Plugin | Purpose | Notes |
-|-------|---------|-------|
-| **ArmIKPlus** | Auto-generates arm IK chains | Developed by t0r0 on NicoNico |
-| **KKPMX** | Converts Koikatsu characters to PMX | Uses Python for automation |
-| **PMXEPlugin536** | Texture masking and edge scaling | Requires SlimDX for rendering |
+Some versions of PMX Editor include a C# scripting window, allowing for quick automation or testing of small code snippets without compiling a full plugin. The API available in the scripting environment is generally the same as for compiled plugins.
 
-### Community Resources
+## 5. Best Practices and Common Pitfalls
 
-- **NicoNico Forums** – Japanese-centric but rich with plugin discussions  
-- **Modelo Platform** – Hosts open-source PMX models and rigs  
-- **GitHub Repositories** – Search for `mmd blender pmx` for integration guides
+### API Versioning and Compatibility
 
----
+Be aware that `PEPlugin.dll` might have different versions across various PMX Editor distributions. Plugins compiled against one version might not be compatible with another if there are breaking API changes. Aim for widely distributed PMX Editor versions if possible.
 
-## Projects and Models Created with PMX Editor
+### Null Reference Handling
 
-### Common Use Cases
+Always check for `null` before accessing properties or methods of objects obtained from the PMX Editor API, especially `pmx`, `builder`, or individual model elements.
 
-- MMD animations (dance, music videos)
-- VRChat avatars
-- Game character exports
-- Custom anime figure creation
+```
+IPXMaterial material = builder.Material(); // Assuming builder is IPXPmxBuilder
+if (material != null)
+{
+    material.Name = "NewMaterial";
+}
+else
+{
+    // Log error or handle appropriately
+    PEPlugin.System.Diagnostics.Debug.WriteLine("Failed to create material instance.");
+}
+```
 
-### Optimization Techniques
+### Avoiding Modern C# Features
 
-- Use **UV morphs** instead of increasing polygon count
-- Apply **SDEF deformations** for smoother skinning
-- Export with **MMD Tools** for Blender-based refinement
+As stated, PMX Editor's .NET environment is older. Avoid:
 
----
+- C# 8.0+ syntax (index/range operators `data[1..^0]`, null-coalescing assignments `??=`, etc.).
+    
+- `init` properties, `record` types.
+    
+- `Span<T>`, `Memory<T>`.
+    
+- Complex LINQ expressions if they cause issues (simpler ones are usually fine). Stick to traditional loops for reliability.
+    
 
-## Appendix: Structured Reference Tables
+### Correct Referencing and Initialization
 
-### File Formats and Structures
+- Ensure `PEPlugin.dll` and `SlimDX.dll` are correctly referenced and accessible at runtime.
+    
+- Properly initialize API objects using the provided builders or connectors.
+    
 
-| Item | Description |
-|------|-------------|
-| `.pmx` | Main format used in modern MMD workflows |
-| `.pmd` | Legacy format, still supported |
-| Vertex Layout | Position, normal, UV, bone IDs, weights |
-| Bone Hierarchy | Parent-child relationships, flags, transformations |
+### Memory Management and Performance
 
-### Supported Deformation Types
+- PMX Editor, especially 32-bit versions, can be memory-intensive with large models.
+    
+- Undo/Redo operations consume significant memory.
+    
+- Write efficient code, especially when iterating over large collections (vertices, faces).
+    
+- Dispose of `IDisposable` objects if you create any that are not managed by the editor (less common with SlimDX in this context, but good practice).
+    
 
-| Type | Usage Case |
-|------|------------|
-| BDEF1 | Simple static limbs |
-| BDEF2 | Arms/legs with dual influence |
-| BDEF4 | Complex joints (shoulders, hips) |
-| SDEF | High-quality soft body deformation |
-| QDEF | Experimental quaternion-based system |
+## 6. Troubleshooting Common Development Issues
 
-### Available Plugin APIs
+### DLL Loading Errors (Blocked Files, Missing Dependencies)
 
-| Interface | Functionality |
-|----------|---------------|
-| `IPEPlugin` | Core plugin entry point |
-| `IPXModel` | Model manipulation |
-| `IPXBone` | Bone hierarchy access |
-| `IPXMorph` | Expression and morph control |
-| `IPXPhysics` | Access to rigid bodies and constraints |
+- **"Operation not supported" / File Blocked:** If DLLs are downloaded, Windows might block them. Right-click the DLL → Properties → Unblock.
+    
+- **Missing `netstandard.dll` or similar:** Indicates plugin was compiled against an incompatible .NET version (e.g., .NET Core/.NET Standard). Re-target to .NET Framework 4.7.2/4.8.
+    
+- **`SlimDX.dll` or `PEPlugin.dll` not found:** Ensure these are in the PMX Editor's execution path or alongside your plugin if not correctly referenced.
+    
 
----
-?? 
-## Conclusion
+### Compilation Errors (Type Mismatches, Missing Member Definitions)
 
-While **PMX Editor lacks official developer documentation**, this guide provides a comprehensive overview of:
-- How to develop plugins using C#, Python, and SlimDX
-- Bone system internals and IK chain generation
-- Facial morphs and animation systems
-- File structure and reverse-engineered PMX specs
-- Available tools and active communities
+- **"'IPXMaterial' does not contain a definition for 'FaceCount'"**: This property might not exist or is calculated internally. Consult API examples or use IntelliSense.
+    
+- **"'IPXVertex' does not contain a definition for 'Def'"**: The property name for deformation type might be different or accessed via a method.
+    
+- **"Method must declare a body"**: Ensure all non-abstract, non-extern, non-partial methods have an implementation (`{ }`), even if empty.
+    
+- **Type Mismatches (e.g., `V3` vs. custom vector types):** Always use types from `PEPlugin.SDX` (e.g., `PEPlugin.SDX.V3`, `PEPlugin.SDX.V4`) for vectors and matrices.
+    
 
-We recommend further research into:
-- SDEF vector calculations
-- Rigging interoperability with Blender and Unity
-- Improving internationalization support
-- Developing a standardized SDK for plugin developers
+### Runtime Crashes
 
+- **`NullReferenceException`:** Most common; due to not checking for `null` before using an API object.
+    
+- **`IndexOutOfRangeException`:** When accessing collections, always check bounds.
+    
+- **Architecture Mismatch:** Running an x64 plugin in an x86 editor or vice-versa.
+    
 
-### Performance Optimization
+## 7. Advanced Topics
 
-- Parallel processing is implemented for certain operations:
-  ```csharp
-  Parallel.ForEach(view.GetSelectedVertexIndices(), vx => {
-      // Parallel logic
-  });
-  ```
- 
+### Understanding SDEF Internals (Reverse Engineered)
+
+The SDEF (Spherical Deformation) skinning method provides smoother joint deformations. While the PMX specification defines the data structure (weights for two bones, and three `V3` vectors: C, R0, R1), the exact mathematical formula used by MMD and PMX Editor for applying these weights is not officially documented. Community efforts have reverse-engineered plausible formulas, which are crucial for tools that need to accurately replicate MMD's skinning behavior (e.g., exporters to game engines, custom renderers). Researching these community findings is necessary for advanced SDEF manipulation or implementation.
+
+### Interoperability with Other Tools (e.g., Blender MMD Tools)
+
+Many workflows involve moving models between PMX Editor and other 3D software like Blender.
+
+- **MMD Tools for Blender:** A popular Blender addon that supports importing and exporting PMX, PMD, VMD (motion), and VPD (pose) files. Understanding how MMD Tools handles conversions (e.g., SDEF to Blender weight painting, material interpretation) can be beneficial for developers creating complementary tools or plugins.
+    
+- **Coordinate Systems and Scaling:** Be mindful of differences in coordinate systems (Y-up vs. Z-up) and units when transferring models.
+    
+
+## 8. Community and Resources
+
+### Key Repositories and Plugin Examples
+
+- **GitHub:** Search for "PMX Editor Plugin", "MMD Tools", "pymeshio". Many developers share their plugins and PMX-related libraries here.
+    
+    - `Wampa842/WPlugins`: Collection of PMX Editor plugins.
+        
+    - `paralleltree/PmXEditorPlugins`: More examples of plugins.
+        
+    - `ousttrue/pymeshio`: Python library for PMD/PMX I/O.
+        
+- **BowlRoll:** A Japanese file-sharing site where many MMD assets, including plugins, are distributed.
+    
+
+### Relevant Online Communities
+
+- **NicoNicoDouga (and associated blogs):** Historically a central hub for MMD content and technical discussions in Japanese.
+    
+- **DeviantArt:** Contains MMD communities where users share resources and tutorials.
+    
+- **VPVP Wiki (Japanese):** A comprehensive wiki for MMD-related information.
+    
+
+### 9. Appendix: Reference Tables
+   
+   
+   
+PMX File Structure Overview
+
+(Abridged - See full community specifications for byte-level details)
+| Segment         | Content Description                                                                                           |
+|-----------------|------------------------------------------------------------------------------------ |
+| Header          | Signature "PMX ", Version, Globals (text encoding, index sizes)                          |
+| Model Info      | Model Name (JP/EN), Comments (JP/EN)                                                          |
+| Vertex List     | Count, then array of Vertices (Position, Normal, UV, Extra UVs, Weight Type, Weights, Edge) |
+| Face List       | Count, then array of Vertex Indices (3 per face)                                    |
+| Texture List    | Count, then array of Texture File Paths (UTF-16 or UTF-8)                           |
+| Material List   | Count, then array of Materials (Colors, Tex Indices, Flags, Edge, Toon, Sphere)     |
+| Bone List       | Count, then array of Bones (Name, Pos, Parent, IK data, Flags)                      |
+| Morph List      | Count, then array of Morphs (Name, Type, Offsets)                                   |
+| Display Frame List | Count, then array of Display Frames (Name, Special Flag, Element Groups)          |
+| Rigid Body List | Count, then array of Rigid Bodies (Name, Bone, Shape, Physics Params)               |
+| Joint List      | Count, then array of Joints (Name, Type, Connected Bodies, Physics Params)          |
+Bone Flags Explained
+
+(Interpreted from various community sources; exact bits can be complex)
+| Bit (Hex) | Description (Common Interpretation)                                 |
+|-----------|---------------------------------------------------------------------|
+| 0x0001    | Tail Connection Type (0: Offset, 1: To Bone Index)                  |
+| 0x0002    | Rotatable                                                           |
+| 0x0004    | Movable / Translatable                                              |
+| 0x0008    | Visible                                                             |
+| 0x0010    | Controllable / Operable by user                                     |
+| 0x0020    | Is IK Bone                                                          |
+| 0x0100    | Append Rotation (Rotation is added to parent's rotation)            |
+| 0x0200    | Append Translation (Translation is added to parent's translation)   |
+| 0x0400    | Fixed Axis (Rotation restricted to a specific axis)                 |
+| 0x0800    | Local Transformation (Uses local coordinate system for append)      |
+| 0x1000    | Physics After Deform (Bone transformation applied after physics)    |
+| 0x2000    | External Parent Deform (Bone transforms with an external parent)    |
+Key API Interfaces
+
+(From PEPlugin.dll, namespace PEPlugin and sub-namespaces)
+| Interface       | Primary Purpose                                                              |
+|-----------------|------------------------------------------------------------------------------|
+| IPEPlugin     | Main entry point for plugins. Defines Name, Version, Run method.             |
+| IPERunArgs    | Argument passed to IPEPlugin.Run, provides access to IPEPluginHost.      |
+| IPEPluginHost | Provides access to editor services like IConnect.                          |
+| IConnect      | Connector to obtain IPXPmx (model data) and IPXPmxBuilder.               |
+| IPXPmx        | Represents the loaded PMX model; provides access to its components.          |
+| IPXPmxBuilder | Factory for creating new PMX model elements (vertices, bones, etc.).         |
+| IPXHeader     | Access to PMX file header information.                                       |
+| IPXModelInfo  | Access to model name and comments.                                           |
+| IPXVertex     | Represents a single vertex and its properties.                               |
+| IPXFace       | Represents a single face (triangle of vertex indices).                       |
+| IPXMaterial   | Represents a material and its properties.                                    |
+| IPXBone       | Represents a bone and its properties.                                        |
+| IPXMorph      | Represents a morph and its offsets.                                          |
+| IPXRigidBody  | Represents a rigid body for physics.                                         |
+| IPXJoint      | Represents a joint (constraint) for physics.                                 |
+| IPXView       | Interface to control aspects of the editor's 3D view.                      |
+| IPESystem     | Provides system-level information or utilities.                              |
+
+(Note: Specific interface names and availability might vary slightly between PMX Editor versions. Use IntelliSense in Visual Studio for confirmation.)
