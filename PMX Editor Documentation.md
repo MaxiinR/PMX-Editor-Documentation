@@ -499,16 +499,16 @@ Key API Interfaces
 
 (From PEPlugin.dll, namespace PEPlugin and sub-namespaces)
 | Interface       | Primary Purpose                                                              |
-|-----------------|------------------------------------------------------------------------------|
-| IPEPlugin     | Main entry point for plugins. Defines Name, Version, Run method.             |
-| IPERunArgs    | Argument passed to IPEPlugin.Run, provides access to IPEPluginHost.      |
-| IPEPluginHost | Provides access to editor services like IConnect.                          |
-| IConnect      | Connector to obtain IPXPmx (model data) and IPXPmxBuilder.               |
+|-----------------|------------------------------------------------------------------------------       |
+| IPEPlugin     | Main entry point for plugins. Defines Name, Version, Run method.                  |
+| IPERunArgs    | Argument passed to IPEPlugin.Run, provides access to IPEPluginHost.          |
+| IPEPluginHost | Provides access to editor services like IConnect.                                            |
+| IConnect      | Connector to obtain IPXPmx (model data) and IPXPmxBuilder.                        |
 | IPXPmx        | Represents the loaded PMX model; provides access to its components.          |
-| IPXPmxBuilder | Factory for creating new PMX model elements (vertices, bones, etc.).         |
-| IPXHeader     | Access to PMX file header information.                                       |
-| IPXModelInfo  | Access to model name and comments.                                           |
-| IPXVertex     | Represents a single vertex and its properties.                               |
+| IPXPmxBuilder | Factory for creating new PMX model elements (vertices, bones, etc.).          |
+| IPXHeader     | Access to PMX file header information.                                                           |
+| IPXModelInfo  | Access to model name and comments.                                                         |
+| IPXVertex     | Represents a single vertex and its properties.                                                   |
 | IPXFace       | Represents a single face (triangle of vertex indices).                       |
 | IPXMaterial   | Represents a material and its properties.                                    |
 | IPXBone       | Represents a bone and its properties.                                        |
@@ -519,3 +519,100 @@ Key API Interfaces
 | IPESystem     | Provides system-level information or utilities.                              |
 
 (Note: Specific interface names and availability might vary slightly between PMX Editor versions. Use IntelliSense in Visual Studio for confirmation.)
+
+---
+
+## Section 5: Best Practices and Troubleshooting
+
+This section details best practices for plugin development and provides solutions to common issues, particularly those encountered when creating plugins with Windows Forms UIs.
+
+### 5.1 General Best Practices
+
+-   **Target Framework and Language**: To ensure maximum compatibility, target **.NET Framework 4.7.2** or **4.8** and set the C# Language Version to **7.3** or lower in your project settings. Newer .NET or C# features are not supported by the editor's host environment and will cause loading errors.
+-   **Defensive API Usage**: Always perform null-checks before accessing objects returned by the PMX Editor API, such as `IPXPmx` or its component lists (`.Bone`, `.Material`, etc.). Wrap all plugin logic, especially in the `Run()` method and event handlers, in `try-catch` blocks to prevent unhandled exceptions from crashing the entire editor.
+-   **Update Editor Views**: After programmatically modifying model data, the editor's UI will not update automatically. You must explicitly call methods like `args.Host.Connector.Form.UpdateList()` or `args.Host.Connector.View.UpdateView()` to refresh the display.
+
+### 5.2 Troubleshooting: Windows Forms Plugins
+
+Developing plugins with a Windows Forms UI introduces a unique set of challenges. The following are solutions to the most common problems.
+
+#### 5.2.1 Design-Time Errors (Visual Studio Designer)
+
+These errors typically prevent the form from being viewed or edited visually.
+
+**Problem: The designer fails to open, showing only the code view.**
+
+* **Cause**: The form's constructor requires an `IPERunArgs` parameter, which the Visual Studio designer cannot provide. The designer requires a **parameterless constructor** to render the form.
+* **Solution**: Provide two constructors. The parameterless constructor is used exclusively by the designer, while the constructor that accepts `IPERunArgs` is used by the plugin at runtime. It is also critical to guard any host-dependent logic with a `this.DesignMode` check.
+
+    ```csharp
+    // In MyForm.cs
+    public partial class MyForm : Form
+    {
+        // Constructor for the Visual Studio Designer ONLY
+        public MyForm()
+        {
+            InitializeComponent();
+        }
+    
+        // Constructor used by the plugin at runtime
+        public MyForm(IPERunArgs args)
+        {
+            InitializeComponent();
+            // Pass args to a separate method to load data
+            LoadModelData(args);
+        }
+
+        private void LoadModelData(IPERunArgs args)
+        {
+            // This check prevents code from running in the designer
+            if (this.DesignMode) return;
+
+            // Safely access args.Host, etc. here
+        }
+    }
+    ```
+
+**Problem: The designer crashes with an error like "The designer cannot process the code..."**
+
+* **Cause**: The `InitializeComponent()` method in the `.Designer.cs` file contains C# syntax that the designer's simple code parser cannot understand, such as lambda expressions (`=>`) or other complex logic.
+* **Solution**: The `InitializeComponent()` method must remain purely declarative. Avoid any advanced C# features or imperative logic within it. Replace any such code with simple, repetitive property assignments.
+
+**Problem: Compilation errors like "Ambiguity between members" or "Type already contains a definition for..."**
+
+* **Cause**: A field for a UI control (e.g., `private Button myButton;`) has been declared in *both* `MyForm.cs` and `MyForm.Designer.cs`.
+* **Solution**: All UI control fields must be declared **only** in the `MyForm.Designer.cs` file. Your logic file (`MyForm.cs`) can access them directly as they are part of the same `partial` class.
+
+#### 5.2.2 Runtime Errors and Stability
+
+These errors occur after the plugin has been loaded and is running inside PMX Editor.
+
+**Problem: The plugin crashes on launch with a `NullReferenceException`.**
+
+* **Cause A: Architecture Mismatch.** The plugin is compiled for a different architecture than the host application (e.g., an `x86` plugin in `PmxEditor_x64.exe`). While it may appear in the menu, the .NET runtime can fail to initialize objects correctly, leading to crashes.
+* **Solution A:** Verify the host executable and set the **Platform target** in your project properties to explicitly match (`x86` or `x64`).
+
+* **Cause B: Premature Data Access.** The code attempts to get the model state via `GetCurrentState()` when no model is loaded, or it attempts to use the `IPERunArgs` object before it has been properly initialized.
+* **Solution B:** Move data loading logic from the form's constructor to the `Form_Load` event. This ensures the form and its dependencies are fully initialized. Perform robust null-checking on the `IPERunArgs` object and the returned model data before use.
+
+**Problem: The application freezes and crashes when selecting an item in a `ListBox`.**
+
+* **Cause**: The `SelectedIndexChanged` event handler modifies the same list it is observing, then programmatically resets the selection, which re-triggers the event and creates an infinite loop, leading to a `StackOverflowException`.
+* **Solution**: Temporarily unsubscribe the event handler before modifying the list's data. Re-subscribe the handler within a `finally` block to ensure the connection is always restored.
+
+**Problem: PMX Editor crashes when the plugin window is closed using the 'X' button.**
+
+* **Cause**: The form's `Dispose()` method is called, which conflicts with the plugin host's lifecycle management.
+* **Solution**: Intercept the `FormClosing` event. If the close reason is `UserClosing`, cancel the event and simply hide the form (`e.Cancel = true; this.Hide();`). The main plugin class should be responsible for disposing of the form when the editor unloads the plugin.
+
+#### 5.2.3 Data and Logic Integrity
+
+**Problem: Logic fails because it's operating on "stale" model data.**
+
+* **Cause**: Storing references to model objects (e.g., `IPXBone`) is unreliable. When `GetCurrentState()` is called again, new instances of all model objects are created in memory. The previously stored references are now "stale" and will fail reference equality checks (`.IndexOf()`, `==`, etc.).
+* **Architectural Solution**: **Store indices, not objects.** Maintain a `List<int>` of selected item indices. This index is a stable identifier. Before processing, get a fresh model state via `GetCurrentState()` and use the stored indices to retrieve the current, valid object instances from the new state's collections.
+
+**Problem: Setting a property (e.g., Collision Group to `2`) results in a different value in the UI (e.g., `Group 3`).**
+
+* **Cause**: A discrepancy between the user-facing, 1-based indexing in the editor UI and the internal, 0-based indexing used by the API.
+* **Solution**: Manually adjust the value before assigning it to an API property to account for the offset (e.g., `apiObject.Group = ui_value - 1;`).
